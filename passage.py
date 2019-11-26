@@ -9,12 +9,16 @@ class Passage:
 
         @staticmethod
         def get_ngram(text):
-            """ Get statistic on n-grams and their numbers of a text """
+            """
+            Get statistic on n-grams and the number of words of a text
+            :param text: String
+            :return: An array of the 1~4grams strings and the number of words(segments when Chinese) of the text.
+            """
+
             for i in (' ', '.', ',', '?', '!', "\"", "/"):
-                text = text.replace(i, " ")  # only in English text
+                text = text.replace(i, " ")     # only in English text
             words_list = [i for i in text.split(" ") if i]
             words_list_len = len(words_list)
-            print("length = ", words_list_len)
             text = words_list
             ngram = {}       # key is the actual 1~4gram sequence and value is the number of it
             for i in range(4):
@@ -49,10 +53,11 @@ class Passage:
                 self.total_count[i] += length - i
             for key in ngram.keys():
                 if key in ref_ngram.keys():
-                    self.match_count[i] += ngram[key]
+                    # print("bingo: ", key, ngram[key])
+                    self.match_count[len(key.split(" ")) - 1] += ngram[key]
 
-        summatch = sum(self.match_count)
-        sumtotal = sum(self.total_count)
+        print("match_count: ", self.match_count)
+        print("total_count: ", self.total_count)
 
         score = math.pow(sum([float(a)/b for a, b in zip(self.match_count, self.total_count)]), 0.25)
         score_list = []
@@ -64,10 +69,10 @@ class Passage:
 
 if __name__ == '__main__':
     with open("C:\\Users\\Cecilia\\Desktop\\ref1.txt", 'r') as ref:
-        reference = ref.read().split("</s>")
+        reference = [x for x in ref.read().split("<s>") if x]
         with open("C:\\Users\\Cecilia\\Desktop\\中文1.txt", 'r') as f:
-            passage = Passage(reference, f.read().split("</s>"), [0, 0, 0, 0], [0, 0, 0, 0], 0)
-            score_list = passage.get_bleu_score()
-            print(score_list)
+            passage = Passage(reference, [x for x in f.read().split("<s>") if x])
+            bleu_scores = passage.get_bleu_score()
+            print(bleu_scores)
             f.close()
     ref.close()
