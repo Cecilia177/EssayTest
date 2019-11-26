@@ -46,11 +46,11 @@ class Passage:
     def get_bleu_score(self):
         for index, sentence in enumerate(self.sentences):
             ref_sentence = self.reference[index]
-            ngram, length = self.Sentence.get_ngram(sentence)
+            ngram, words_list_length = self.Sentence.get_ngram(sentence)
             ref_ngram, ref_length = self.Sentence.get_ngram(ref_sentence)
 
             for i in range(4):
-                self.total_count[i] += length - i
+                self.total_count[i] += words_list_length - i
             for key in ngram.keys():
                 if key in ref_ngram.keys():
                     # print("bingo: ", key, ngram[key])
@@ -59,11 +59,11 @@ class Passage:
         print("match_count: ", self.match_count)
         print("total_count: ", self.total_count)
 
-        score = math.pow(sum([float(a)/b for a, b in zip(self.match_count, self.total_count)]), 0.25)
+        # score = math.exp(sum([math.log(float(a)/b) for a, b in zip(self.match_count, self.total_count)]) * 0.25)
         score_list = []
         for i in range(4):
             score_list.append(float(self.match_count[i] / self.total_count[i]))
-        score_list.append(score)
+        # score_list.append(score)
         return score_list
 
 
