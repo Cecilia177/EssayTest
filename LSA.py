@@ -75,22 +75,23 @@ class LSA(object):
         self.U, self.s, self.Vh = svd(self.A, full_matrices=False)
 
     def get_similarity(self, k, i, j):
+
         """
         Choose top K values from tuple s and calculate the similarity between doc i and doc j.
 
         :return: cosine similarity value
         """
 
-        S = np.mat(self.s[0: k])
-        a = np.mat(S.dot(self.Vh[:, i][0: k]))
-        b = np.mat(S.dot(self.Vh[:, j][0: k]))
+        sigma = np.zeros([k, k])
+        for x in range(k):
+            sigma[x, x] = self.s[x]
+
+        a = np.mat(sigma.dot(self.Vh[:, i][0: k]))
+        b = np.mat(sigma.dot(self.Vh[:, j][0: k]))
         num = float(a * b.T)
         denom = np.linalg.norm(a) * np.linalg.norm(b)
         cos = num / denom
         return cos
-
-# stopwords = ["的", "是"]
-# ignorewords = [",", ".", "。", " "]
 
 
 titles = [

@@ -1,6 +1,9 @@
 import numpy as np
+import operator
 
-d = [1, 2, 3]
-# print(d[1: 3])
-print(d[1: 2])
-m = np.mat(d[1: 2])
+a = "abc"
+b = "abc"
+n = 11
+print(operator.eq(a, b))
+c = 1 if n == 11 else 2
+print(c)
