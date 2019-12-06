@@ -95,28 +95,13 @@ class LSA(object):
 
 
 titles = [
-    "The Neatest Little Guide to Stock Market Investing",
-    "Investing For Dummies, 4th Edition",
-    "The Little Book of Common Sense Investing: The Only Way to Guarantee Your Fair Share of Stock Market Returns",
-    "The Little Book of Value Investing",
-    "Value Investing: From Graham to Buffett and Beyond",
-    "Rich Dad's Guide to Investing: What the Rich Invest in, That the Poor and the Middle Class Do Not!",
-    "Investing in Real Estate, 5th Edition",
-    "Stock Investing For Dummies",
-    "Rich Dad's Advisors: The ABC's of Real Estate Investing: The Secrets of Finding Hidden Profits Most Investors Miss"
+    "我们 不必 学习 如何 变得 心灵 健康 这 就 跟 我们 身体 知道 如何 愈合 一道 小伤 或是 治疗 断骨 一样 自然天成",
+    "我们 不必 一定 去 学习 如何 做到 心理健康 这种 能力 植根于 我们 自身 就 像 我们 的 身体 知道 如何 愈合 伤口 如何 修复 断骨",
 ]
-stopwords = ['and', 'edition', 'for', 'in', 'little', 'of', 'the', 'to']
-ignorechars = ''',:'!'''
-
+stopwords = []
+ignorechars = ''
 
 mylsa = LSA(stopwords, ignorechars)
-docs = []
-path = "C:\\Users\\Cecilia\\Desktop\\"
-filename = ["ref2.txt", "ref2.txt"]
-# for file in filename:
-#     with open(path + file, 'r') as f:
-#         docs.append(f.read())
-#         f.close()
 for title in titles:
     mylsa.parse(title)
 mylsa.build_count_matrix()
@@ -125,5 +110,5 @@ print("")
 mylsa.TFIDF()
 mylsa.printA()
 mylsa.svd_cal()
-print(mylsa.get_similarity(3, 1, 2))
+print(mylsa.get_similarity(2, 0, 1))
 
