@@ -86,29 +86,13 @@ class LSA(object):
         for x in range(k):
             sigma[x, x] = self.s[x]
 
-        a = np.mat(sigma.dot(self.Vh[:, i][0: k]))
-        b = np.mat(sigma.dot(self.Vh[:, j][0: k]))
+        a = np.mat(sigma.dot(self.Vh[:, i]))
+        b = np.mat(sigma.dot(self.Vh[:, j]))
         num = float(a * b.T)
         denom = np.linalg.norm(a) * np.linalg.norm(b)
         cos = num / denom
         return cos
 
 
-titles = [
-    "我们 不必 学习 如何 变得 心灵 健康 这 就 跟 我们 身体 知道 如何 愈合 一道 小伤 或是 治疗 断骨 一样 自然天成",
-    "我们 不必 一定 去 学习 如何 做到 心理健康 这种 能力 植根于 我们 自身 就 像 我们 的 身体 知道 如何 愈合 伤口 如何 修复 断骨",
-]
-stopwords = []
-ignorechars = ''
 
-mylsa = LSA(stopwords, ignorechars)
-for title in titles:
-    mylsa.parse(title)
-mylsa.build_count_matrix()
-mylsa.printA()
-print("")
-mylsa.TFIDF()
-mylsa.printA()
-mylsa.svd_cal()
-print(mylsa.get_similarity(2, 0, 1))
 

@@ -3,6 +3,8 @@ from sentence import Sentence
 from LSA import LSA
 import traceback
 import numpy as np
+from train import Classifier
+
 
 def get_features():
     pymysql.converters.encoders[np.float64] = pymysql.converters.escape_float
@@ -10,10 +12,10 @@ def get_features():
     pymysql.converters.conversions.update(pymysql.converters.decoders)
 
     conn = pymysql.connect(host="127.0.0.1",
-                           database='essaydata',
+                           database='demo',
                            port=3306,
                            user='root',
-                           password='',
+                           password='root',
                            charset='utf8')
     cur = conn.cursor()
     cur1 = conn.cursor()
@@ -108,6 +110,34 @@ def get_bleu_score(ref, answer):
     return score_list
 
 
-get_features()
+def extract_features():
+    conn = pymysql.connect(host="127.0.0.1",
+                           database='demo',
+                           port=3306,
+                           user='root',
+                           password='root',
+                           charset='utf8')
+    cur = conn.cursor()
+    sql = "SELECT TEXTID, 1GRAM, 2GRAM, 3GRAM, 4GRAM, LENGTHRATIO, LSAGRADE FROM features"
+    sql2 = "SELECT Z1 FROM SCORES, DETECTION WHERE TEXTID = %s AND SCORES.STUDENTID = DETECTION.STUDENTID"
+    try:
+        cur.execute(sql)
+        data = cur.fetchall()
+        data_list = []
+        grade_list = []
+        for d in data:
+            data_list.append(list(d))
+            cur.execute(sql2, (d[0]))
+            grade_list.append(str(cur.fetchone()[0]))
+    # except Exception as e:
+    #     print("Error getting features!", e)
+    finally:
+        cur.close()
+        conn.close()
+    return data_list, grade_list
 
 
+x, y = extract_features()
+clf = Classifier()
+clf.train(x, y)
+print(clf.predict([[1, 0.5, 0.2381, 0.1, 0.0526, 0.59, 0.0]]))

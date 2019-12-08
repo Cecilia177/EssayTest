@@ -1,6 +1,8 @@
 import re
 from zhon.hanzi import punctuation
 import jieba
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer
 
 pattern = re.compile("\\d+\\.")
 # pattern2 = re.compile("^\\d+\\.")
@@ -28,11 +30,12 @@ def splittt(str):
     print("text: ", text)
 
 
-text = "我是一名学生"
-intab = '，。；：！“”'
-outtab = ',.;:!""'
-seg = jieba.cut(text)
+corpus = [
+    '我们 不必 学习 如何 变得 心灵 健康',
+    '我们 不必 一定 去 学习 如何 做到 心理健康'
+]
 
-print(" ".join(seg))
-# print(text.translate(translator))
-
+words = CountVectorizer.fit_transform(corpus)
+tfidf = TfidfTransformer.fit_transform(words)
+print(CountVectorizer.get_feature_names())
+print(tfidf)

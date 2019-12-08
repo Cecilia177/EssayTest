@@ -4,25 +4,17 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import svm
 
 
-categories = ['alt.atheism', 'soc.religion.christian', 'comp.graphics', 'sci.med']
-dataset_path = "M:\\DATA\\20newsgroups\\20news-bydate-train"
+class Classifier(object):
+    def __init__(self):
+        self.clf = ""
 
-# returned dataset is a scikit-learn bunch
-twenty_train = fetch_20newsgroups(subset="train", categories=categories, shuffle=True, random_state=42)
-twenty_train_local = load_files(dataset_path, categories=categories, shuffle=True, random_state=42)
+    def train(self, x, y):
+        self.clf = svm.SVC(decision_function_shape='ovo', kernel='poly')
+        self.clf.fit(x, y)
 
-# target_names are the requested categories, which are the names of sub-folders
-print(twenty_train_local.target_names)
-# data are the files
-print(len(twenty_train.filenames))
-
-# target is the array storing the category ids
-print(twenty_train_local.target[:10])
+    def predict(self, x):
+        return self.clf.predict(x)
 
 
-X = [[0], [1], [2], [3]]
-Y = [0, 1, 2, 3]
-clf = svm.SVC(decision_function_shape='ovo', kernel='poly')
-clf.fit(X, Y)
-print(clf.predict([[4], [8]]))
+
 
