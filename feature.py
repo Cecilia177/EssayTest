@@ -12,80 +12,87 @@ def get_features():
     pymysql.converters.conversions.update(pymysql.converters.decoders)
 
     conn = pymysql.connect(host="127.0.0.1",
-                           database='demo',
+                           database='essaydata',
                            port=3306,
                            user='root',
-                           password='root',
+                           password='',
                            charset='utf8')
-    cur = conn.cursor()
-    cur1 = conn.cursor()
+    get_ref_cur = conn.cursor()
+    get_detection_cur = conn.cursor()
+    get_feature_cur = conn.cursor()
+    insert_feature_cur = conn.cursor()
 
-    sql = "SELECT courseid, questionid, ref FROM standards"
+    get_ref_sql = "SELECT courseid, questionid, ref FROM standards"
     try:
-        cur.execute(sql)
-        course = cur.fetchall()
-        print("course: ", course)
+        get_ref_cur.execute(get_ref_sql)
+        course = get_ref_cur.fetchall()
     except Exception as e:
         print("Error getting courseid and questionid!", e)
     else:
         for courseid, questionid, ref in course:
             reference = Sentence(text=ref)
-            print("answer: ", reference.text)
+            print("current question:", questionid, "of", courseid)
             reference.remove_puc()
             reference.segment()
             reference.get_ngram()
 
-            sql2 = "SELECT textid, text FROM detection WHERE courseid = %s and questionid = %s"
+            get_detection_sql = "SELECT textid, text FROM detection WHERE courseid = %s and questionid = %s"
+            get_feature_sql = "SELECT * FROM features WHERE textid = %s"
 
             try:
-                if cur.execute(sql2, (courseid, questionid)):
-                    textid, text = cur.fetchone()
+                if get_detection_cur.execute(get_detection_sql, (courseid, questionid)):
+                    textid, text = get_detection_cur.fetchone()
                 else:
+                    print("No quesion", questionid, "of", courseid, "in DETECTION DB.")
                     continue
                 current_answer = Sentence(text=text)
                 while text:
-                    # print("current_text: ", current_answer.text)
-                    current_answer.remove_puc()
-                    # Get length ratio
-                    # print("reference length: ", reference.text)
-                    lengthratio = format(float(len(current_answer.text)) / len(reference.text), '.2f')
+                    # If the features of current answer is already in DB, than ignore it.
+                    get_feature_cur.execute(get_feature_sql, textid)
+                    if get_feature_cur.fetchone() is None:
+                        current_answer.remove_puc()
+                        # Get length ratio
+                        lengthratio = format(float(len(current_answer.text)) / len(reference.text), '.2f')
+                        current_answer.segment()
+                        current_answer.get_ngram()
+                        bleu = get_bleu_score(reference, current_answer)
 
-                    current_answer.segment()
-                    current_answer.get_ngram()
-                    # print("current answer length: ", current_answer.length)
-                    bleu = get_bleu_score(reference, current_answer)
+                        stopwords = []
+                        ignorechars = ''
+                        mylsa = LSA(stopwords, ignorechars)
+                        for sentence in [reference.text, current_answer.text]:
+                            mylsa.parse(sentence)
+                        mylsa.build_count_matrix()
+                        mylsa.TFIDF()
+                        mylsa.svd_cal()
+                        lsagrade = mylsa.get_similarity(2, 0, 1)
 
-                    stopwords = []
-                    ignorechars = ''
-                    mylsa = LSA(stopwords, ignorechars)
-                    for sentence in [reference.text, current_answer.text]:
-                        mylsa.parse(sentence)
-                    mylsa.build_count_matrix()
-                    mylsa.TFIDF()
-                    mylsa.svd_cal()
-                    lsagrade = mylsa.get_similarity(2, 0, 1)
+                        insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade)" \
+                               "VALUES(%s, %s, %s, %s, %s, %s, %s)"
+                        try:
+                            print("textid:", textid)
+                            print("1~4gram:", bleu)
+                            print("lengthratio:", lengthratio)
+                            print("lsa:", lsagrade)
+                            insert_feature_cur.execute(insert_feature_sql, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade))
+                            conn.commit()
+                            print("success inserting features!")
+                        except Exception as e:
+                            print("Error inserting features..", traceback.print_exc())
+                            break
+                    else:
+                        print("Features of textid", textid, "is already in db.")
 
-                    sql3 = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade)" \
-                           "VALUES(%s, %s, %s, %s, %s, %s, %s)"
-                    try:
-                        print("textid:", textid)
-                        print("1~4gram:", bleu)
-                        print("lengthratio:", lengthratio)
-                        print("lsa:", lsagrade)
-
-                        cur1.execute(sql3, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade))
-                        conn.commit()
-
-                        print("success inserting features!")
-                        textid, text = cur.fetchone()
-                        current_answer.text = text
-                    except Exception as e:
-                        print("Error inserting features..", traceback.print_exc())
-                        break
+                    next_record = get_detection_cur.fetchone()
+                    textid, text = next_record if next_record is not None else (-1, None)
+                    current_answer.text = text
             except Exception as e:
                 print("Error getting text...", traceback.print_exc())
     finally:
-        cur.close()
+        get_feature_cur.close()
+        get_detection_cur.close()
+        get_ref_cur.close()
+        insert_feature_cur.close()
         conn.close()
 
 
@@ -112,10 +119,10 @@ def get_bleu_score(ref, answer):
 
 def extract_features():
     conn = pymysql.connect(host="127.0.0.1",
-                           database='demo',
+                           database='essaydata',
                            port=3306,
                            user='root',
-                           password='root',
+                           password='',
                            charset='utf8')
     cur = conn.cursor()
     sql = "SELECT TEXTID, 1GRAM, 2GRAM, 3GRAM, 4GRAM, LENGTHRATIO, LSAGRADE FROM features"
@@ -137,6 +144,7 @@ def extract_features():
     return data_list, grade_list
 
 
+get_features()
 x, y = extract_features()
 clf = Classifier()
 clf.train(x, y)
