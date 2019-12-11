@@ -133,7 +133,7 @@ def extract_features():
         data_list = []
         grade_list = []
         for d in data:
-            data_list.append(list(d))
+            data_list.append(list(d[1:]))
             cur.execute(sql2, (d[0]))
             grade_list.append(str(cur.fetchone()[0]))
     # except Exception as e:
@@ -144,8 +144,17 @@ def extract_features():
     return data_list, grade_list
 
 
-get_features()
+# get_features()
 x, y = extract_features()
+
+train_x = x[:260]
+train_y = y[:260]
+test_x = x[261:]
+test_y = y[261:]
+
 clf = Classifier()
-clf.train(x, y)
-print(clf.predict([[1, 0.5, 0.2381, 0.1, 0.0526, 0.59, 0.0]]))
+clf.train(train_x, train_y)
+print("test_x:", test_x)
+print("text_y:", test_y)
+print(clf.predict([[0.625000, 0.400000, 0.214300, 0.153800, 0.370000, 0.0]]))
+# print(clf.predict([[1, 0.5, 0.2381, 0.1, 0.0526, 0.59, 0.0]]))
