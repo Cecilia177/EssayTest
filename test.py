@@ -1,41 +1,31 @@
-import re
-from zhon.hanzi import punctuation
-import jieba
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.datasets import make_moons, make_circles, make_classification
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
 
-pattern = re.compile("\\d+\\.")
-# pattern2 = re.compile("^\\d+\\.")
-str1 = "46. _我" \
-       "们不需要学习怎样像精神变得健康;,我们的身体知道怎样愈 合伤或者修复断裂的骨头，而精神就同身体的这种试一样 建拍着我们"
-str2 = "46..ni889.89"
-str3 = "dss46."
-ignored_chars = [" ", "_", "-"]
+X, y = make_classification(n_features=2, n_redundant=0, n_informative=2, random_state=1, n_clusters_per_class=1)
 
+rng = np.random.RandomState(2)
+X += 2 * rng.uniform(size=X.shape)
+linearly_separable = (X, y)
 
-def match(str):
-    if re.match(pattern, str):
-        print(str, ": ok")
-    else:
-        print(str, ": fail")
+datasets = [make_moons(noise=0.3, random_state=0),
+            make_circles(noise=0.2, factor=0.5, random_state=1),
+            linearly_separable]
 
-
-def splittt(str):
-    for char in ignored_chars:
-        str.replace(char, "")  # remove useless blank spaces
-    str.replace(";", "")
-    print("text: ", str)
-    lists = re.split(pattern, str, maxsplit=1)
-    text = "".join(lists) if lists[0] == "" else str
-    print("text: ", text)
-
-
-corpus = [
-    '我们 不必 学习 如何 变得 心灵 健康',
-    '我们 不必 一定 去 学习 如何 做到 心理健康'
-]
-
-words = CountVectorizer.fit_transform(corpus)
-tfidf = TfidfTransformer.fit_transform(words)
-print(CountVectorizer.get_feature_names())
-print(tfidf)
+classifier = SVC(gamma=2, C=1)
+count = 1
+for ds_cnt, ds in enumerate(datasets):
+    print("This is NO.", count, "training.")
+    X, y = ds
+    # print("X size:", X.shape)
+    print("X:", X)
+    # X = StandardScaler().fit_transform(X)
+    print("transformed X:", X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.4, random_state=42)
+    classifier.fit(X_train, y_train)
+    print(classifier.predict(X_test))
+    score = classifier.score(X_test, y_test)
+    print(score)
+    count += 1

@@ -3,7 +3,8 @@ from sentence import Sentence
 from LSA import LSA
 import traceback
 import numpy as np
-from train import Classifier
+from sklearn import svm
+from sklearn.model_selection import train_test_split
 
 
 def get_features():
@@ -145,16 +146,4 @@ def extract_features():
 
 
 # get_features()
-x, y = extract_features()
 
-train_x = x[:260]
-train_y = y[:260]
-test_x = x[261:]
-test_y = y[261:]
-
-clf = Classifier()
-clf.train(train_x, train_y)
-print("test_x:", test_x)
-print("text_y:", test_y)
-print(clf.predict([[0.625000, 0.400000, 0.214300, 0.153800, 0.370000, 0.0]]))
-# print(clf.predict([[1, 0.5, 0.2381, 0.1, 0.0526, 0.59, 0.0]]))
