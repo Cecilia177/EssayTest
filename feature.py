@@ -118,7 +118,7 @@ def get_bleu_score(ref, answer):
     return score_list
 
 
-def extract_features():
+def extract_features(purpose):
     conn = pymysql.connect(host="127.0.0.1",
                            database='essaydata',
                            port=3306,
@@ -136,7 +136,11 @@ def extract_features():
         for d in data:
             data_list.append(list(d[1:]))
             cur.execute(sql2, (d[0]))
-            grade_list.append(str(cur.fetchone()[0]))
+            if purpose == 1:
+                grade_list.append(str(cur.fetchone()[0]))    # for classification purpose.
+            else:                                          # for regression.
+                grade_list.append((cur.fetchone()[0]))
+
     # except Exception as e:
     #     print("Error getting features!", e)
     finally:
