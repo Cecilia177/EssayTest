@@ -2,7 +2,7 @@ import numpy as np
 from numpy import zeros
 from scipy.linalg import svd
 import math
-
+import pymysql
 
 class LSA(object):
     def __init__(self, stopwords, ignorechars):
@@ -23,13 +23,12 @@ class LSA(object):
         :param doc: String of doc
         :return: none
         """
-        # words = [x for x in doc.split("/") if x]
+
         words = doc.split()
         for w in words:
             # lowercase all letters and delete the ignored words
             b = bytearray(w.lower(), 'utf-8')
             w = (b.translate(None, delete=bytearray(self.ignorechars, 'utf-8'))).decode('utf-8')
-
             if w in self.stopwords:
                 continue
             elif w in self.wdict:
@@ -86,12 +85,13 @@ class LSA(object):
         for x in range(k):
             sigma[x, x] = self.s[x]
 
-        a = np.mat(sigma.dot(self.Vh[:, i]))
-        b = np.mat(sigma.dot(self.Vh[:, j]))
+        a = np.mat(sigma.dot(self.Vh[:, i][:k]))
+        b = np.mat(sigma.dot(self.Vh[:, j][:k]))
         num = float(a * b.T)
         denom = np.linalg.norm(a) * np.linalg.norm(b)
         cos = num / denom
         return cos
+
 
 
 

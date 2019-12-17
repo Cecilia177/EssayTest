@@ -3,15 +3,15 @@ from sentence import Sentence
 from LSA import LSA
 import traceback
 import numpy as np
-from sklearn import svm
-from sklearn.model_selection import train_test_split
+from correlation import pearson_cor
+
+
+pymysql.converters.encoders[np.float64] = pymysql.converters.escape_float
+pymysql.converters.conversions = pymysql.converters.encoders.copy()
+pymysql.converters.conversions.update(pymysql.converters.decoders)
 
 
 def get_features():
-    pymysql.converters.encoders[np.float64] = pymysql.converters.escape_float
-    pymysql.converters.conversions = pymysql.converters.encoders.copy()
-    pymysql.converters.conversions.update(pymysql.converters.decoders)
-
     conn = pymysql.connect(host="127.0.0.1",
                            database='essaydata',
                            port=3306,
@@ -22,8 +22,11 @@ def get_features():
     get_detection_cur = conn.cursor()
     get_feature_cur = conn.cursor()
     insert_feature_cur = conn.cursor()
+    get_all_detection = conn.cursor()
 
     get_ref_sql = "SELECT courseid, questionid, ref FROM standards"
+
+    record_count = 0
     try:
         get_ref_cur.execute(get_ref_sql)
         course = get_ref_cur.fetchall()
@@ -31,64 +34,78 @@ def get_features():
         print("Error getting courseid and questionid!", e)
     else:
         for courseid, questionid, ref in course:
-            reference = Sentence(text=ref)
+            reference = Sentence(text=ref, flag="ch")
             print("current question:", questionid, "of", courseid)
-            reference.remove_puc()
-            reference.segment()
-            reference.get_ngram()
-
+            reference.preprocess()
+            doc_matrix = [reference.pure_text]
             get_detection_sql = "SELECT textid, text FROM detection WHERE courseid = %s and questionid = %s"
             get_feature_sql = "SELECT * FROM features WHERE textid = %s"
 
             try:
-                if get_detection_cur.execute(get_detection_sql, (courseid, questionid)):
-                    textid, text = get_detection_cur.fetchone()
+                if get_all_detection.execute(get_detection_sql, (courseid, questionid)):
+                    detections = get_all_detection.fetchall()
+                    # print("all docs:", docs)
+                    docs = []
+                    textids = []
+                    for dt in detections:
+                        textids.append(dt[0])
+                        docs.append(dt[1])
+                        cur_ans = Sentence(text=dt[1], flag="ch")
+                        cur_ans.preprocess()
+                        doc_matrix.append(cur_ans.pure_text)
+
+                    # build count matrix, tf-idf modification and svd
+                    stopwords = []
+                    ignorechars = ''
+                    mylsa = LSA(stopwords, ignorechars)
+                    for sentence in doc_matrix:
+                        mylsa.parse(sentence)
+                    mylsa.build_count_matrix()
+                    mylsa.TFIDF()
+                    mylsa.svd_cal()
+                    print(mylsa.s)
+                    print(mylsa.s.shape)
                 else:
                     print("No quesion", questionid, "of", courseid, "in DETECTION DB.")
                     continue
-                current_answer = Sentence(text=text)
-                while text:
-                    # If the features of current answer is already in DB, than ignore it.
-                    get_feature_cur.execute(get_feature_sql, textid)
-                    if get_feature_cur.fetchone() is None:
-                        current_answer.remove_puc()
-                        # Get length ratio
-                        lengthratio = format(float(len(current_answer.text)) / len(reference.text), '.2f')
-                        current_answer.segment()
-                        current_answer.get_ngram()
-                        bleu = get_bleu_score(reference, current_answer)
 
-                        stopwords = []
-                        ignorechars = ''
-                        mylsa = LSA(stopwords, ignorechars)
-                        for sentence in [reference.text, current_answer.text]:
-                            mylsa.parse(sentence)
-                        mylsa.build_count_matrix()
-                        mylsa.TFIDF()
-                        mylsa.svd_cal()
-                        lsagrade = mylsa.get_similarity(2, 0, 1)
+                i = 1
+                for index, text in enumerate(docs):
+                    current_answer = Sentence(text=text, flag="ch")
+                    textid = textids[index]
 
-                        insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade)" \
-                               "VALUES(%s, %s, %s, %s, %s, %s, %s)"
-                        try:
-                            print("textid:", textid)
-                            print("1~4gram:", bleu)
-                            print("lengthratio:", lengthratio)
-                            print("lsa:", lsagrade)
-                            insert_feature_cur.execute(insert_feature_sql, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade))
-                            conn.commit()
-                            print("success inserting features!")
-                        except Exception as e:
-                            print("Error inserting features..", traceback.print_exc())
-                            break
-                    else:
-                        print("Features of textid", textid, "is already in db.")
+                    # If the features of current answer is already in DB, ignore it.
+                    # get_feature_cur.execute(get_feature_sql, textids[index])
+                    # if get_feature_cur.fetchone() is None:
 
-                    next_record = get_detection_cur.fetchone()
-                    textid, text = next_record if next_record is not None else (-1, None)
-                    current_answer.text = text
+                    current_answer.preprocess()
+                    # Get length ratio
+                    lengthratio = format(float(current_answer.length) / reference.length, '.2f')
+                    # Get 1~4gram scores
+                    bleu = get_bleu_score(reference, current_answer)
+                    # Get 1~4gram scores
+                    lsagrade = mylsa.get_similarity(10, 0, i)
+
+                    insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade)" \
+                           "VALUES(%s, %s, %s, %s, %s, %s, %s)"
+                    try:
+                        # print("textid:", textid)
+                        # print("1~4gram:", bleu)
+                        # print("lengthratio:", lengthratio)
+                        # print("lsa:", lsagrade)
+                        insert_feature_cur.execute(insert_feature_sql, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade))
+                        conn.commit()
+                        # print("success inserting features!")
+                    except Exception as e:
+                        print("Error inserting features..", traceback.print_exc())
+                        break
+
+                    i += 1
+
+                record_count += i - 1
             except Exception as e:
                 print("Error getting text...", traceback.print_exc())
+        print("-----------------------------Finishing inserting features of", record_count, "text.")
     finally:
         get_feature_cur.close()
         get_detection_cur.close()
@@ -106,11 +123,10 @@ def get_bleu_score(ref, answer):
         total_count[i] += answer.length - i
     for key in answer_ngram.keys():
         if key in ref_ngram.keys():
-            # print("bingo: ", key, ngram[key])
             match_count[len(key.split(" ")) - 1] += answer_ngram[key]
     # print("match_count: ", match_count)
     # print("total_count: ", total_count)
-    # score = math.exp(sum([math.log(float(a)/b) for a, b in zip(self.match_count, self.total_count)]) * 0.25)
+    # score = math.exp(sum([math.log(float(a)/b) for a, b in zip(match_count, total_count)]) * 0.25)
     score_list = []
     for i in range(4):
         score_list.append(format(float(match_count[i] / total_count[i]), ".4f"))
@@ -118,36 +134,85 @@ def get_bleu_score(ref, answer):
     return score_list
 
 
-def extract_features(purpose):
+def extract_features():
+    """
+    Get the correlation of score(y) and each feature.
+    Return:
+        feature_list: the matrix of feature values, shape of which is (M, N).
+                --M is the number of samples and N is the number of features(6 for now).
+                --features[i][j] is the NO.j feature value of NO.i sample.
+            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade'].
+        score_list:
+            matrix of scores, shape of which is (M, 1).
+                --M is the number of samples.
+    """
     conn = pymysql.connect(host="127.0.0.1",
                            database='essaydata',
                            port=3306,
                            user='root',
                            password='',
                            charset='utf8')
+    get_all_features_sql = "SELECT textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade FROM features"
+    get_questionid_sql = "SELECT questionid FROM detection WHERE textid=%s"
     cur = conn.cursor()
-    sql = "SELECT TEXTID, 1GRAM, 2GRAM, 3GRAM, 4GRAM, LENGTHRATIO, LSAGRADE FROM features"
-    sql2 = "SELECT Z1 FROM SCORES, DETECTION WHERE TEXTID = %s AND SCORES.STUDENTID = DETECTION.STUDENTID"
+    feature_list = []
+    score_list = []
+    score_text = {}  # key is textid and value is score(aka. y) of the text
     try:
-        cur.execute(sql)
-        data = cur.fetchall()
-        data_list = []
-        grade_list = []
-        for d in data:
-            data_list.append(list(d[1:]))
-            cur.execute(sql2, (d[0]))
-            if purpose == 1:
-                grade_list.append(str(cur.fetchone()[0]))    # for classification purpose.
-            else:                                          # for regression.
-                grade_list.append((cur.fetchone()[0]))
-
-    # except Exception as e:
-    #     print("Error getting features!", e)
+        cur.execute(get_all_features_sql)
+        features = cur.fetchall()
+        # Get feature(aka. X) values
+        for f in features:
+            feature_list.append(list(f[1:]))
+        features = np.asarray(features)
+        # Get the matching score for every text
+        for text_id in features[:, 0]:
+            cur.execute(get_questionid_sql, text_id)
+            question_id = cur.fetchone()[0]
+            get_score_sql = "SELECT z" + str(question_id) + " FROM scores, detection WHERE detection.textid=%s " \
+                            "and scores.studentid=detection.studentid"
+            cur.execute(get_score_sql, text_id)
+            score = cur.fetchone()[0]
+            # print("current textid:", text_id, "question id:", question_id, "score:", score)
+            score_list.append(score)
+            score_text[text_id] = score
+        # print(score_text)
+        return feature_list, score_list
+    except Exception:
+        print("Error getting features...", traceback.print_exc())
     finally:
         cur.close()
         conn.close()
-    return data_list, grade_list
 
 
-# get_features()
+def cor_of_features(features, scores):
+    """
+    Paras:
+        features:
+            the matrix of feature values, shape of which is (M, N).
+                --M is the number of samples and N is the number of features(6 for now).
+                --features[i][j] is the NO.j feature value of NO.i sample.
+            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade'].
+        scores:
+            matrix of scores, shape of which is (M, 1).
+                --M is the number of samples.
+    returns:
+        A dict, key of which is feature name and value is pearson correlation value.
+    """
+    cors = {}
+    i = 0
+    features_arr = np.asarray(features)
+    for f in ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade']:
+        cors[f] = round(pearson_cor(scores, features_arr[:, i]), 4)
+        i += 1
+    print(cors)
+    return cors
+
+
+if __name__ == '__main__':
+    feature, score = extract_features()
+    print(feature)
+    print(score)
+    print(len(score))
+    cor_of_features(feature, score)
 
