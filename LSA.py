@@ -4,6 +4,7 @@ from scipy.linalg import svd
 import math
 import pymysql
 
+
 class LSA(object):
     def __init__(self, stopwords, ignorechars):
         self.stopwords = stopwords       # exclude words without actual meaning like "the", "and", etc.
@@ -87,10 +88,10 @@ class LSA(object):
 
         a = np.mat(sigma.dot(self.Vh[:, i][:k]))
         b = np.mat(sigma.dot(self.Vh[:, j][:k]))
+        # print("a:", a, "b:", b)
         num = float(a * b.T)
         denom = np.linalg.norm(a) * np.linalg.norm(b)
-        cos = num / denom
-        return cos
+        return num / denom if denom != 0 else 0
 
 
 

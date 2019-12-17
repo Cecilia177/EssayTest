@@ -4,7 +4,9 @@ from LSA import LSA
 import traceback
 import numpy as np
 from correlation import pearson_cor
-
+from vecsim import vector_similarity
+import gensim
+from gensim.models import KeyedVectors
 
 pymysql.converters.encoders[np.float64] = pymysql.converters.escape_float
 pymysql.converters.conversions = pymysql.converters.encoders.copy()
@@ -30,9 +32,9 @@ def get_features():
     try:
         get_ref_cur.execute(get_ref_sql)
         course = get_ref_cur.fetchall()
-    except Exception as e:
-        print("Error getting courseid and questionid!", e)
-    else:
+
+        word_vectors = KeyedVectors.load("C:\\Users\\Cecilia\\AppData\\Local\\Temp\\vectors.kv")
+
         for courseid, questionid, ref in course:
             reference = Sentence(text=ref, flag="ch")
             print("current question:", questionid, "of", courseid)
@@ -63,8 +65,7 @@ def get_features():
                     mylsa.build_count_matrix()
                     mylsa.TFIDF()
                     mylsa.svd_cal()
-                    print(mylsa.s)
-                    print(mylsa.s.shape)
+
                 else:
                     print("No quesion", questionid, "of", courseid, "in DETECTION DB.")
                     continue
@@ -85,27 +86,34 @@ def get_features():
                     bleu = get_bleu_score(reference, current_answer)
                     # Get 1~4gram scores
                     lsagrade = mylsa.get_similarity(10, 0, i)
+                    # Get sentence vec similarity
 
-                    insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade)" \
-                           "VALUES(%s, %s, %s, %s, %s, %s, %s)"
+                    doc_tf = mylsa.A[: i]  # the tfidf list of doc i is the NO.i column of mylsa.A
+
+                    with open('C:\\Users\\Cecilia\\Desktop\\stopwords.txt', 'r+') as f:
+                        stopwords = f.read().split("\n")
+                    answer_words = current_answer.pure_text.replace(" ", "")
+                    reference_words = reference.pure_text.replace(" ", "")
+                    vec_sim = vector_similarity(answer_words, reference_words, word_vectors, [])
+
+                    insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim)" \
+                           "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
                     try:
-                        # print("textid:", textid)
-                        # print("1~4gram:", bleu)
-                        # print("lengthratio:", lengthratio)
-                        # print("lsa:", lsagrade)
-                        insert_feature_cur.execute(insert_feature_sql, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade))
+                        print("Inserting features__textid:", textid, "1~4gram:", bleu, "lengthratio:", lengthratio,
+                              "lsa:", lsagrade, "vec:", vec_sim)
+                        insert_feature_cur.execute(insert_feature_sql, (textid, bleu[0], bleu[1], bleu[2], bleu[3], lengthratio, lsagrade, vec_sim))
                         conn.commit()
-                        # print("success inserting features!")
+                        print("Success!")
                     except Exception as e:
                         print("Error inserting features..", traceback.print_exc())
                         break
-
                     i += 1
-
                 record_count += i - 1
             except Exception as e:
                 print("Error getting text...", traceback.print_exc())
-        print("-----------------------------Finishing inserting features of", record_count, "text.")
+        print("--------------------Finishing inserting features of", record_count, "text.----------------------")
+    except Exception as e:
+        print("Error getting courseid and questionid!", e)
     finally:
         get_feature_cur.close()
         get_detection_cur.close()
@@ -152,7 +160,7 @@ def extract_features():
                            user='root',
                            password='',
                            charset='utf8')
-    get_all_features_sql = "SELECT textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade FROM features"
+    get_all_features_sql = "SELECT textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim FROM features"
     get_questionid_sql = "SELECT questionid FROM detection WHERE textid=%s"
     cur = conn.cursor()
     feature_list = []
@@ -190,7 +198,7 @@ def cor_of_features(features, scores):
     Paras:
         features:
             the matrix of feature values, shape of which is (M, N).
-                --M is the number of samples and N is the number of features(6 for now).
+                --M is the number of samples and N is the number of features(7 for now).
                 --features[i][j] is the NO.j feature value of NO.i sample.
             feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade'].
         scores:
@@ -202,7 +210,7 @@ def cor_of_features(features, scores):
     cors = {}
     i = 0
     features_arr = np.asarray(features)
-    for f in ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade']:
+    for f in ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vec']:
         cors[f] = round(pearson_cor(scores, features_arr[:, i]), 4)
         i += 1
     print(cors)
@@ -210,9 +218,10 @@ def cor_of_features(features, scores):
 
 
 if __name__ == '__main__':
+    get_features()
     feature, score = extract_features()
-    print(feature)
-    print(score)
-    print(len(score))
+    # print(feature)
+    # print(score)
+    # print(len(score))
     cor_of_features(feature, score)
 

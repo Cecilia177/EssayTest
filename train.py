@@ -66,7 +66,7 @@ X_cf, y_cf = extract_features()
 min_max_scaler = MinMaxScaler()
 X_cf_minmax = min_max_scaler.fit_transform(X_cf)
 
-sparameters = [
+parameters = [
         {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
         {'kernel': ['rbf'], 'C': [0.1, 0.5, 1, 10, 100, 1000], 'gamma': [0.01, 1, 5, 10, 100]},
         # {'kernel': ['poly'], 'C': [1, 10, 100, 1000], 'degree': [3, 4], 'gamma': [0.01, 1, 5, 10, 100]}
@@ -91,6 +91,8 @@ score_func = make_scorer(pearson_cor, greater_is_better=True)
 
 # Regression model
 X_rg, y_rg = extract_features()
+print(len(X_rg[0]))
+print(len(y_rg))
 X_rg_minmax = min_max_scaler.fit_transform(X_rg)
 svr = SVR()
 best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_minmax,

@@ -68,13 +68,13 @@ class Sentence:
         self.text = new_text[:-1]
         pure_text = self.text.replace(" </s> </s> </s>", "")
         pure_text = pure_text.replace("</s> </s> </s> ", "")
-        self.pure_text = pure_text
+        self.pure_text = pure_text   # pure_text is made of phrases and blank spaces
         self.length = length
 
     def part_of_speech(self):
         speeches = psg.cut(self.text)
-        for word, flag in speeches:
-            print(word, ": ", flag)
+        # for word, flag in speeches:
+        #     print(word, ": ", flag)
         return speeches
 
     def preprocess(self):

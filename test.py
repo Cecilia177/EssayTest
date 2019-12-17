@@ -1,5 +1,6 @@
 import numpy as np
+from sklearn.metrics import mean_squared_error
 
-a = [[1, 3], [4, 5], [7, 0]]
-a = np.array(a)
-print(type("str" + str(1)))
+a = np.array([1, 2, 3])
+b = a / a
+np.sqrt(np.sum(np.square()))
