@@ -60,8 +60,8 @@ def get_features():
                     stopwords = []
                     ignorechars = ''
                     mylsa = LSA(stopwords, ignorechars)
-                    for sentence in doc_matrix:
-                        mylsa.parse(sentence)
+                    for doc in doc_matrix:
+                        mylsa.parse(doc)
                     mylsa.build_count_matrix()
                     mylsa.TFIDF()
                     mylsa.svd_cal()
@@ -81,7 +81,7 @@ def get_features():
 
                     current_answer.preprocess()
                     # Get length ratio
-                    lengthratio = format(float(current_answer.length) / reference.length, '.2f')
+                    lengthratio = format(float(current_answer.seg_length) / reference.seg_length, '.2f')
                     # Get 1~4gram scores
                     bleu = get_bleu_score(reference, current_answer)
                     # Get 1~4gram scores
@@ -89,6 +89,7 @@ def get_features():
                     # Get sentence vec similarity
 
                     doc_tf = mylsa.A[: i]  # the tfidf list of doc i is the NO.i column of mylsa.A
+
 
                     with open('C:\\Users\\Cecilia\\Desktop\\stopwords.txt', 'r+') as f:
                         stopwords = f.read().split("\n")
@@ -123,17 +124,21 @@ def get_features():
 
 
 def get_bleu_score(ref, answer):
+    """
+    paras:
+        ref: class Sentence
+        answer: class Sentence
+    """
     ref_ngram = ref.ngram
     answer_ngram = answer.ngram
     total_count = [0] * 4
     match_count = [0] * 4
-    for i in range(4):
-        total_count[i] += answer.length - i
     for key in answer_ngram.keys():
+        n = len(key.split(" ")) - 1   # key is n-gram
+        total_count[n] += 1
         if key in ref_ngram.keys():
-            match_count[len(key.split(" ")) - 1] += answer_ngram[key]
-    # print("match_count: ", match_count)
-    # print("total_count: ", total_count)
+            match_count[n] += min(answer_ngram[key], ref_ngram[key])
+            print("Got one:", key, "+", min(answer_ngram[key], ref_ngram[key]))
     # score = math.exp(sum([math.log(float(a)/b) for a, b in zip(match_count, total_count)]) * 0.25)
     score_list = []
     for i in range(4):
@@ -200,7 +205,7 @@ def cor_of_features(features, scores):
             the matrix of feature values, shape of which is (M, N).
                 --M is the number of samples and N is the number of features(7 for now).
                 --features[i][j] is the NO.j feature value of NO.i sample.
-            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade'].
+            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vecsim'].
         scores:
             matrix of scores, shape of which is (M, 1).
                 --M is the number of samples.
@@ -217,11 +222,11 @@ def cor_of_features(features, scores):
     return cors
 
 
-if __name__ == '__main__':
-    get_features()
-    feature, score = extract_features()
-    # print(feature)
-    # print(score)
-    # print(len(score))
-    cor_of_features(feature, score)
+# if __name__ == '__main__':
+#     get_features()
+#     feature, score = extract_features()
+#     # print(feature)
+#     # print(score)
+#     # print(len(score))
+#     cor_of_features(feature, score)
 

@@ -60,56 +60,57 @@ def plot(x_value, y_value_list):
     plt.show()
 
 
-# get features and tags for classification task
-X_cf, y_cf = extract_features()
-# regularize the features data
-min_max_scaler = MinMaxScaler()
-X_cf_minmax = min_max_scaler.fit_transform(X_cf)
+if __name__ == '__main__':
+    # get features and tags for classification task
+    X_cf, y_cf = extract_features()
+    # regularize the features data
+    min_max_scaler = MinMaxScaler()
+    X_cf_minmax = min_max_scaler.fit_transform(X_cf)
 
-parameters = [
-        {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
-        {'kernel': ['rbf'], 'C': [0.1, 0.5, 1, 10, 100, 1000], 'gamma': [0.01, 1, 5, 10, 100]},
-        # {'kernel': ['poly'], 'C': [1, 10, 100, 1000], 'degree': [3, 4], 'gamma': [0.01, 1, 5, 10, 100]}
-    ]
-cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+    parameters = [
+            {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
+            {'kernel': ['rbf'], 'C': [0.1, 0.5, 1, 10, 100, 1000], 'gamma': [0.01, 1, 5, 10, 100]},
+            # {'kernel': ['poly'], 'C': [1, 10, 100, 1000], 'degree': [3, 4], 'gamma': [0.01, 1, 5, 10, 100]}
+        ]
+    cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
 
-# get the best classifier through CV
-# svc = svm.SVC(probability=False)
-# best_clf, best_params = cross_val(svc, params=parameters, X_train=X_cf_minmax,
-#                                   y_train=y_cf, score="accuracy", cv=cv)
-# print("best clf:", best_clf, "best para:", best_params)
-#
-# title = r"Learning Curves (SVM, linear kernel, C=1000)"
-# plot_learning_curve(best_clf, title, X_cf_minmax, y_cf, ylim=(0.3, 1.01),
-#                     cv=cv, n_jobs=4)
-# plt.show()
-# learning_plot(best_clf, X_cf_minmax, y_cf, "accuracy", cv)
-# validation_plot(best_clf, X_cf_minmax, y_cf)
+    # get the best classifier through CV
+    # svc = svm.SVC(probability=False)
+    # best_clf, best_params = cross_val(svc, params=parameters, X_train=X_cf_minmax,
+    #                                   y_train=y_cf, score="accuracy", cv=cv)
+    # print("best clf:", best_clf, "best para:", best_params)
+    #
+    # title = r"Learning Curves (SVM, linear kernel, C=1000)"
+    # plot_learning_curve(best_clf, title, X_cf_minmax, y_cf, ylim=(0.3, 1.01),
+    #                     cv=cv, n_jobs=4)
+    # plt.show()
+    # learning_plot(best_clf, X_cf_minmax, y_cf, "accuracy", cv)
+    # validation_plot(best_clf, X_cf_minmax, y_cf)
 
-# define a scoring function
-score_func = make_scorer(pearson_cor, greater_is_better=True)
+    # define a scoring function
+    score_func = make_scorer(pearson_cor, greater_is_better=True)
 
-# Regression model
-X_rg, y_rg = extract_features()
-print(len(X_rg[0]))
-print(len(y_rg))
-X_rg_minmax = min_max_scaler.fit_transform(X_rg)
-svr = SVR()
-best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_minmax,
-                                     y_train=y_rg, score=score_func, cv=cv)
-print("best svr:", best_svr, "best para:", best_params_rg)
+    # Regression model
+    X_rg, y_rg = extract_features()
+    print("number of features:", len(X_rg[0]))
+    print("number of samples:", len(y_rg))
+    X_rg_minmax = min_max_scaler.fit_transform(X_rg)
+    svr = SVR()
+    # Get the best model through CV
+    best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_minmax,
+                                         y_train=y_rg, score=score_func, cv=cv)
+    print("best svr:", best_svr, "best para:", best_params_rg)
 
+    title_rg = r"Learning Curves (SVR, rbf kernel)"
+    plot_learning_curve(best_svr, title_rg, X_rg_minmax, y_rg, ylim=(0.0, 0.8),
+                        cv=cv, n_jobs=4, scoring=score_func)
+    plt.show()
 
-title_rg = r"Learning Curves (SVR, rbf kernel)"
-plot_learning_curve(best_svr, title_rg, X_rg_minmax, y_rg, ylim=(0.0, 0.8),
-                    cv=cv, n_jobs=4, scoring=score_func)
-plt.show()
-
-X_train, X_test, y_train, y_test = train_test_split(X_rg_minmax, y_rg, test_size=0.33, random_state=42)
-best_svr.fit(X_train, y_train)
-y_predict = best_svr.predict(X_test)
-for index, y in enumerate(y_test):
-    if abs(y - y_predict[index]) > 0.2:
-        print("target:", y, "predict:", y_predict[index])
-print(pearson_cor(y_test, y_predict))
-# print(best_svr.predict([[0, 0, 0, 0, 0, 0]]))
+    X_train, X_test, y_train, y_test = train_test_split(X_rg_minmax, y_rg, test_size=0.33, random_state=42)
+    best_svr.fit(X_train, y_train)
+    y_predict = best_svr.predict(X_test)
+    for index, y in enumerate(y_test):
+        if abs(y - y_predict[index]) > 0.2:
+            print("target:", y, "predict:", y_predict[index])
+    print(pearson_cor(y_test, y_predict))
+    # print(best_svr.predict([[0, 0, 0, 0, 0, 0]]))

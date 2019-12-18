@@ -60,8 +60,10 @@ class LSA(object):
         """
         # sum up numbers on the same column, how many keys every doc contains
         WordsPerDoc = np.sum(self.A, axis=0)
+        print(WordsPerDoc)
         # sum up numbers on the same row, how many docs the key belongs to
         DocsPerWord = np.sum(np.asarray(self.A > 0, 'i'), axis=1)
+        print(DocsPerWord)
         rows, cols = self.A.shape
         for i in range(rows):
             for j in range(cols):
