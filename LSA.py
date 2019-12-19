@@ -16,16 +16,18 @@ class LSA(object):
         self.U = 0
         self.s = 0
         self.Vh = 0
+        self.count_matrix = 0
 
     def parse(self, doc):
         """
-        Parse the document, aka. calculate the words in a doc. wdict["book"] = ["3", "4"] represents the word "book"
+        Parse the document, aka. calculate the words in a doc. wdict["book"] = [3, 4] represents the word "book"
         appears in both 3th and 4th doc
-        :param doc: String of doc
-        :return: none
+        ------
+        Parameters
+            doc: Class Sentence, with pure_text attribute
         """
 
-        words = doc.split()
+        words = doc.pure_text.split()
         for w in words:
             # lowercase all letters and delete the ignored words
             b = bytearray(w.lower(), 'utf-8')
@@ -49,21 +51,21 @@ class LSA(object):
         for i, k in enumerate(self.keys):
             for d in self.wdict[k]:
                 self.A[i, d] += 1
+        self.count_matrix = self.A.copy()
 
     def printA(self):
         print(self.A)
 
     def TFIDF(self):
         """
-        Modify the counts with TF-IDF
-        :return:
+        Modify the counts with TF-IDF.
+        After calling, TF-IDF value, or the A[i, j] is 0 under two circumstances only: doc k doesn't contain word key[i]
+            in it; word key[i] appears in every doc.
         """
-        # sum up numbers on the same column, how many keys every doc contains
+        # sum up numbers on the same column, how many keys every doc contains.
         WordsPerDoc = np.sum(self.A, axis=0)
-        print(WordsPerDoc)
-        # sum up numbers on the same row, how many docs the key belongs to
+        # how many docs the key belongs to.
         DocsPerWord = np.sum(np.asarray(self.A > 0, 'i'), axis=1)
-        print(DocsPerWord)
         rows, cols = self.A.shape
         for i in range(rows):
             for j in range(cols):

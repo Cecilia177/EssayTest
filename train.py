@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn import svm
-from feature import extract_features
+from feature import extract_data
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import learning_curve, validation_curve, train_test_split, cross_val_score
 import matplotlib.pyplot as plt
@@ -9,6 +9,7 @@ from correlation import pearson_cor
 from sklearn.metrics import make_scorer
 from learningcurve import plot_learning_curve
 from sklearn.svm import SVR
+import pymysql
 
 
 def cross_val(estimator, params, X_train, y_train, score, cv):
@@ -61,11 +62,19 @@ def plot(x_value, y_value_list):
 
 
 if __name__ == '__main__':
+
+    conn = pymysql.connect(host="127.0.0.1",
+                           database='essaydata',
+                           port=3306,
+                           user='root',
+                           password='',
+                           charset='utf8')
+
     # get features and tags for classification task
-    X_cf, y_cf = extract_features()
+    # X_cf, y_cf = extract_data()
     # regularize the features data
     min_max_scaler = MinMaxScaler()
-    X_cf_minmax = min_max_scaler.fit_transform(X_cf)
+    # X_cf_minmax = min_max_scaler.fit_transform(X_cf)
 
     parameters = [
             {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
@@ -91,7 +100,7 @@ if __name__ == '__main__':
     score_func = make_scorer(pearson_cor, greater_is_better=True)
 
     # Regression model
-    X_rg, y_rg = extract_features()
+    X_rg, y_rg = extract_data(conn)
     print("number of features:", len(X_rg[0]))
     print("number of samples:", len(y_rg))
     X_rg_minmax = min_max_scaler.fit_transform(X_rg)
@@ -99,7 +108,8 @@ if __name__ == '__main__':
     # Get the best model through CV
     best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_minmax,
                                          y_train=y_rg, score=score_func, cv=cv)
-    print("best svr:", best_svr, "best para:", best_params_rg)
+    print("best svr:", best_svr)
+    print("best para:", best_params_rg)
 
     title_rg = r"Learning Curves (SVR, rbf kernel)"
     plot_learning_curve(best_svr, title_rg, X_rg_minmax, y_rg, ylim=(0.0, 0.8),
