@@ -15,12 +15,15 @@ class Sentence:
         pure_text -- made of phrases and blank spaces after removing punctuations. Updated in method self.segment()
         ngram -- A dict, the key of which is 1~4gram string and the value is the count. Updated in method self.get_ngram().
     """
-    def __init__(self, flag, text=""):
+    def __init__(self, text, language):
+        self.original = text
         self.text = text
         self.ngram = {}
         self.seg_length = 0
-        self.flag = flag
+        self.flag = language
         self.pure_text = ""
+        self.part_of_speech = []
+        self.speeches_gram = {}
 
     def remove_punc(self):
         """
@@ -78,11 +81,35 @@ class Sentence:
                         ngram[gramkey] += 1
         self.ngram = ngram
 
-    def part_of_speech(self):
-        speeches = psg.cut(self.text)
-        # for word, flag in speeches:
-        #     print(word, ": ", flag)
-        return speeches
+    def get_part_of_speech(self):
+        """
+        Segment the original text, get part-of-speeches.
+        """
+        text = self.original.replace(".", "。")
+        speeches = psg.cut(text)
+        speech_list = []
+        # print(len(list(speeches)))
+        for p in speeches:
+            if p.flag == 'x':
+                length = len(speech_list)
+                speech_list[length: length] = ['/x', '/x', '/x', '/x']
+            else:
+                speech_list.append("/" + p.flag)
+
+        if speech_list[-1] != '/x':
+            length = len(speech_list)
+            speech_list[length: length] = ['/x', '/x', '/x', '/x']
+        speech_list[0:0] = ['/x', '/x', '/x', '/x']
+        speeches_gram = {}
+        for index, p in enumerate(speech_list):
+            if index + 5 > len(speech_list):
+                break
+            key = " ".join(speech_list[index:index + 5])
+            if key in speeches_gram.keys():
+                speeches_gram[key] += 1
+            else:
+                speeches_gram[key] = 1
+        self.speeches_gram = speeches_gram
 
     def preprocess(self):
         self.remove_punc()
@@ -92,9 +119,14 @@ class Sentence:
         self.get_ngram()
 
 
-# ss = "我们不必学习如何变得心灵健康,这就跟我们身体知道如何愈合一道小伤或是治疗断骨一样自然天成."
-# s = Sentence(text=ss, flag="ch")
-# s.preprocess()
-# print(s.text)
-# print(s.pure_text)
-# print(s.pure_text.split())
+if __name__ == '__main__':
+    ss = "我们不必学习如何变得心灵健康，这就跟我们身体知道如何愈合一道小伤."
+    s = Sentence(text=ss, language="ch")
+    s.get_part_of_speech()
+    print(s.speeches_gram)
+    count = 0
+    for key in s.speeches_gram.keys():
+        count += s.speeches_gram[key]
+    print(count)
+    # print(s.pure_text)
+    # print(s.pure_text.split())

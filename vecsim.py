@@ -26,7 +26,7 @@ def vector_similarity(id1, id2, vecs, stopwords, tf_idf, keys):
         for i, t in enumerate(tf):
             if t != 0:
                 word = keys[i]
-                print(word, ":", t)
+                # print(word, ":", t)
                 if word not in stopwords and word in vecs.vocab:
                     v += t * vecs[word]
         return v
@@ -34,7 +34,9 @@ def vector_similarity(id1, id2, vecs, stopwords, tf_idf, keys):
     tf1 = tf_idf[:, id1]
     tf2 = tf_idf[:, id2]
     v1, v2 = sentence_vector_with_tf(keys=keys, tf=tf1), sentence_vector_with_tf(keys=keys, tf=tf2)
-    return np.dot(v1, v2) / (norm(v1) * norm(v2)) if (norm(v1) * norm(v2)) != 0 else 0
+    eu_dist = np.linalg.norm(v1 - v2)
+    cosine_dist = np.dot(v1, v2) / (norm(v1) * norm(v2)) if (norm(v1) * norm(v2)) != 0 else 0
+    return eu_dist
 
 
 if __name__ == '__main__':
@@ -56,7 +58,9 @@ if __name__ == '__main__':
 
     tfidf = np.loadtxt("C:\\Users\\Cecilia\\Desktop\\tfidf.txt")
     keys = np.loadtxt("C:\\Users\\Cecilia\\Desktop\\keys.txt", dtype=str, delimiter='/n')
-    print(vector_similarity(id1=0, id2=8, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))
+    print(vector_similarity(id1=0, id2=8, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))      # 0.5'
+    print(vector_similarity(id1=0, id2=1, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))   # 1.0'
+    print(vector_similarity(id1=0, id2=102, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))  # 1.75'
 
 
 

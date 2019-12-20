@@ -5,13 +5,14 @@ from feature import get_bleu_score
 from LSA import LSA
 from gensim.models import KeyedVectors
 from scipy.linalg import norm
+import jieba.posseg as psg
 
 
-A = np.array([[0, 1, 2], [2, 3, 4]])
-b1 = np.sum(A, axis=1)
-
-print(b1)
-print(np.asarray(A > 0, 'i'))
+ss = "人民网1月1日讯，据《纽约时报》报道,美国华尔街股市在2013年的最后一天继续上涨"
+a = [1, 2 ,3]
+a[3:3] = [4]
+print(a)
+# print(np.asarray(A > 0, 'i'))
 # word_vectors = KeyedVectors.load("C:\\Users\\Cecilia\\AppData\\Local\\Temp\\vectors.kv")
 # vec0 = get_sentence_vec(ss0, mylsa.A[:, 0], word_vectors)
 # vec1 = get_sentence_vec(ss1, mylsa.A[:, 1], word_vectors)

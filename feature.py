@@ -6,6 +6,7 @@ import numpy as np
 from correlation import pearson_cor
 from vecsim import vector_similarity
 from gensim.models import KeyedVectors
+from fluency import get_fluency_score
 
 pymysql.converters.encoders[np.float64] = pymysql.converters.escape_float
 pymysql.converters.conversions = pymysql.converters.encoders.copy()
@@ -54,14 +55,14 @@ def cal_features(conn):
             bleu = get_bleu_score(reference, current_answer)
             lsagrade = mylsa.get_similarity(10, 0, i)
             vec_sim = vector_similarity(id1=0, id2=i, vecs=word_vectors, stopwords=[], tf_idf=mylsa.A, keys=mylsa.keys)
-
+            fluency = get_fluency_score(ref=reference, sentence=current_answer)
             # Inserting features of a certain text into DB
-            if insert_features(conn=conn, textid=textid, ngram=bleu, lengthratio=lengthratio, lsagrade=lsagrade, vec_sim=vec_sim):
+            if insert_features(conn=conn, textid=textid, ngram=bleu, lengthratio=lengthratio, lsagrade=lsagrade, vec_sim=vec_sim, fluency=fluency):
                 record_count += 1
     print("--------------------Finishing inserting features of", record_count, "text.----------------------")
 
 
-def insert_features(conn, textid, ngram, lengthratio, lsagrade, vec_sim):
+def insert_features(conn, textid, ngram, lengthratio, lsagrade, vec_sim, fluency):
     """
     Insert a feature record into DB.
     Parameters:
@@ -71,13 +72,13 @@ def insert_features(conn, textid, ngram, lengthratio, lsagrade, vec_sim):
         Boolean, true if success inserting else false.
     """
     try:
-        insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim)" \
-                             "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
+        insert_feature_sql = "INSERT INTO features(textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim, fluency)" \
+                             "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)"
         insert_feature_cur = conn.cursor()
         print("Inserting features__textid:", textid, "1~4gram:", ngram, "lengthratio:", lengthratio,
-              "lsa:", lsagrade, "vec:", vec_sim)
+              "lsa:", lsagrade, "vec:", vec_sim, "fluency:", fluency)
         insert_feature_cur.execute(insert_feature_sql, (
-            textid, ngram[0], ngram[1], ngram[2], ngram[3], lengthratio, lsagrade, vec_sim))
+            textid, ngram[0], ngram[1], ngram[2], ngram[3], lengthratio, lsagrade, vec_sim, fluency))
         conn.commit()
         print("Success!")
         return True
@@ -123,14 +124,17 @@ def get_docs_list(conn, courseid, questionid):
         get_ref_cur = conn.cursor()
         get_ref_cur.execute(get_ref_sql, (courseid, questionid))
         ref = get_ref_cur.fetchone()[0]
-        reference = Sentence(text=ref, flag="ch")
-        reference.preprocess()
-        doc_matrix = [reference]  # add Sentence reference as the first term of doc_matrix
-        textids = [-1]  # Use -1 as the referece textid
+
     except Exception as e:
         print("Error getting reference of courseid", courseid, "questionid", questionid)
+        print(traceback.print_exc())
     finally:
         get_ref_cur.close()
+
+    reference = Sentence(text=ref, language="ch")
+    reference.preprocess()
+    doc_matrix = [reference]  # add Sentence reference as the first term of doc_matrix
+    textids = [-1]  # Use -1 as the referece textid
 
     # Get all detection text of certain courseid and questionid.
     try:
@@ -151,7 +155,7 @@ def get_docs_list(conn, courseid, questionid):
         return
     for dt in detections:
         textids.append(dt[0])
-        cur_ans = Sentence(text=dt[1], flag="ch")
+        cur_ans = Sentence(text=dt[1], language="ch")
         cur_ans.preprocess()
         doc_matrix.append(cur_ans)
     return textids, doc_matrix
@@ -197,7 +201,7 @@ def extract_data(conn):
             matrix of scores, shape of which is (M, 1).
                 --M is the number of samples.
     """
-    get_all_features_sql = "SELECT textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim FROM features"
+    get_all_features_sql = "SELECT textid, 1gram, 2gram, 3gram, 4gram, lengthratio, lsagrade, vecsim, fluency FROM features"
     get_questionid_sql = "SELECT questionid FROM detection WHERE textid=%s"
     cur = conn.cursor()
     feature_list = []
@@ -235,9 +239,9 @@ def cor_of_features(features, scores):
     Paras:
         features:
             the matrix of feature values, shape of which is (M, N).
-                --M is the number of samples and N is the number of features(7 for now).
+                --M is the number of samples and N is the number of features(8 for now).
                 --features[i][j] is the NO.j feature value of NO.i sample.
-            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vecsim'].
+            feature sequence is ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vecsim', 'fluency'].
         scores:
             matrix of scores, shape of which is (M, 1).
                 --M is the number of samples.
@@ -247,7 +251,7 @@ def cor_of_features(features, scores):
     cors = {}
     i = 0
     features_arr = np.asarray(features)
-    for f in ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vec']:
+    for f in ['1gram', '2gram', '3gram', '4gram', 'lengthratio', 'lsagrade', 'vec', 'fluency']:
         cors[f] = round(pearson_cor(scores, features_arr[:, i]), 4)
         i += 1
     print(cors)
@@ -267,7 +271,7 @@ if __name__ == '__main__':
     # ss = Sentence(text=t, flag="ch")
     # ss.preprocess()
     # print(ss.pure_text)
-    # cal_features(conn)
+    cal_features(conn)
     feature, score = extract_data(conn)
     # print(feature)
     # print(score)
