@@ -10,11 +10,13 @@ from sklearn.metrics import make_scorer
 from learningcurve import plot_learning_curve
 from sklearn.svm import SVR
 import pymysql
+import traceback
+import math
 
 
-def cross_val(estimator, params, X_train, y_train, score, cv):
+def cross_val(estimator, params, X_train, y_train, score, cv, n_jobs):
 
-    clf = GridSearchCV(estimator=estimator, param_grid=params, scoring=score, cv=cv, return_train_score=True)
+    clf = GridSearchCV(estimator=estimator, param_grid=params, scoring=score, cv=cv, return_train_score=True, n_jobs=n_jobs)
     clf.fit(X_train, y_train)
     return clf.best_estimator_, clf.best_params_
 
@@ -72,13 +74,10 @@ if __name__ == '__main__':
 
     # get features and tags for classification task
     # X_cf, y_cf = extract_data()
-    # regularize the features data
-    min_max_scaler = MinMaxScaler()
     # X_cf_minmax = min_max_scaler.fit_transform(X_cf)
-
     parameters = [
             {'kernel': ['linear'], 'C': [0.1, 1, 10, 100, 1000]},
-            {'kernel': ['rbf'], 'C': [0.1, 0.5, 1, 10, 100, 1000], 'gamma': [0.01, 1, 5, 10, 100]},
+            {'kernel': ['rbf'], 'C': [0.1, 0.2, 0.25, 0.35, 0.5, 1, 10, 100, 1000], 'gamma': [0.01, 0.5, 1, 5, 10, 100]},
             # {'kernel': ['poly'], 'C': [1, 10, 100, 1000], 'degree': [3, 4], 'gamma': [0.01, 1, 5, 10, 100]}
         ]
     cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
@@ -101,27 +100,58 @@ if __name__ == '__main__':
 
     # Regression model
     X_rg, y_rg = extract_data(conn)
-    print("number of features:", len(X_rg[0]))
-    print("number of samples:", len(y_rg))
-    X_rg_minmax = min_max_scaler.fit_transform(X_rg)
+
+    scaler = MinMaxScaler()
+    X_rg_scaled = scaler.fit_transform(X_rg)
     svr = SVR()
 
     # Get the best model through CV
-    best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_minmax,
-                                         y_train=y_rg, score=score_func, cv=cv)
+    best_svr, best_params_rg = cross_val(svr, params=parameters, X_train=X_rg_scaled,
+                                         y_train=y_rg, score=score_func, cv=cv, n_jobs=-1)
     print("best svr:", best_svr)
     print("best para:", best_params_rg)
 
     title_rg = r"Learning Curves (SVR, rbf kernel)"
-    plot_learning_curve(best_svr, title_rg, X_rg_minmax, y_rg, ylim=(0.0, 0.8),
+    plot_learning_curve(best_svr, title_rg, X_rg_scaled, y_rg, ylim=(0.0, 0.8),
                         cv=cv, n_jobs=4, scoring=score_func)
     plt.show()
 
-    X_train, X_test, y_train, y_test = train_test_split(X_rg_minmax, y_rg, test_size=0.33, random_state=42)
+    # X_train, X_test, y_train, y_test = train_test_split(X_rg_scaled, y_rg, test_size=0.33, random_state=42)
+    X_train = X_rg_scaled[100:]
+    y_train = y_rg[100:]
+    X_test = X_rg_scaled[:100]
+    y_test = y_rg[:100]
     best_svr.fit(X_train, y_train)
+
     y_predict = best_svr.predict(X_test)
-    for index, y in enumerate(y_test):
-        if abs(y - y_predict[index]) > 0.2:
-            print("target:", y, "predict:", y_predict[index])
     print(pearson_cor(y_test, y_predict))
-    # print(best_svr.predict([[0, 0, 0, 0, 0, 0]]))
+
+    # conn = pymysql.connect(host="127.0.0.1",
+    #                        database='essaydata',
+    #                        port=3306,
+    #                        user='root',
+    #                        password='',
+    #                        charset='utf8')
+    # cur = conn.cursor()
+
+    # sql = "SELECT textid FROM features WHERE 1gram=%s AND 2gram=%s AND 3gram=%s AND 4gram=%s"
+    # sql1 = "SELECT textid, text FROM detection WHERE textid=%s"
+    # for index in range(len(y_test)):
+    #     if abs(y_test[index] - y_predict[index]) > 0.3:
+    #
+    #         print("target:", y_test[index], "predict:", y_predict[index])
+    #         # print("features:", X_test[index])
+    #
+    #         try:
+    #             cur.execute(sql1, textids_test[index])
+    #             print("fail detection:", cur.fetchall())
+    #             print()
+    #         except Exception:
+    #             print("Error getting detection..", traceback.print_exc())
+    #
+    # cur.close()
+    # conn.close()
+    #
+    #
+
+

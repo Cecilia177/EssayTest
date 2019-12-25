@@ -12,7 +12,6 @@ def pearson_cor(y_true, y_predict):
         y_true = [float(s) for s in y_true]
     if type(y_predict[0]) != float:
         y_predict = [float(s) for s in y_predict]
-
     y1 = pd.Series(y_true)
     y2 = pd.Series(y_predict)
     return y1.corr(y2, method='pearson')

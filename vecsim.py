@@ -6,7 +6,6 @@ from sentence import Sentence
 import jieba.posseg as psg
 from gensim.test.utils import get_tmpfile
 from gensim.models import KeyedVectors
-import math
 
 
 def vector_similarity(id1, id2, vecs, stopwords, tf_idf, keys):
@@ -35,12 +34,14 @@ def vector_similarity(id1, id2, vecs, stopwords, tf_idf, keys):
     tf2 = tf_idf[:, id2]
     v1, v2 = sentence_vector_with_tf(keys=keys, tf=tf1), sentence_vector_with_tf(keys=keys, tf=tf2)
     eu_dist = np.linalg.norm(v1 - v2)
-    cosine_dist = np.dot(v1, v2) / (norm(v1) * norm(v2)) if (norm(v1) * norm(v2)) != 0 else 0
+    # cosine_dist = np.dot(v1, v2) / (norm(v1) * norm(v2)) if (norm(v1) * norm(v2)) != 0 else 0
     return eu_dist
 
 
 if __name__ == '__main__':
     # model_path = "H:\\Download\\news_12g_baidubaike_20g_novel_90g_embedding_64.bin"
+    # model_path = "M:\\DATA\\baike_26g_news_13g_novel_229g.bin"
+
     # print("-----start loading model---------")
     # model = gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=True)
     # word_vectors = model.wv
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     # word_vectors.save(fname)
 
     # load local word vectors
-    word_vectors = KeyedVectors.load("C:\\Users\\Cecilia\\AppData\\Local\\Temp\\vectors.kv")
+    word_vectors = KeyedVectors.load("./model/vectors_128.kv")
     # with open('C:\\Users\\Cecilia\\Desktop\\stopwords.txt', 'r+') as f:
     #     stopwords = f.read().split("\n")
 
@@ -59,14 +60,9 @@ if __name__ == '__main__':
     tfidf = np.loadtxt("C:\\Users\\Cecilia\\Desktop\\tfidf.txt")
     keys = np.loadtxt("C:\\Users\\Cecilia\\Desktop\\keys.txt", dtype=str, delimiter='/n')
     print(vector_similarity(id1=0, id2=8, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))      # 0.5'
-    print(vector_similarity(id1=0, id2=1, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))   # 1.0'
-    print(vector_similarity(id1=0, id2=102, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))  # 1.75'
+    print(vector_similarity(id1=0, id2=1, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))      # 1.0'
+    print(vector_similarity(id1=0, id2=102, vecs=word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))    # 1.75'
 
-
-
-    # print(vector_similarity(0, 1, word_vectors, stopwords=[], tf_idf=tfidf, keys=keys))
-    # print(tfidf)
-    # print(docs)
 
 
 

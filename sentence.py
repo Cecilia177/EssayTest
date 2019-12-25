@@ -128,5 +128,4 @@ if __name__ == '__main__':
     for key in s.speeches_gram.keys():
         count += s.speeches_gram[key]
     print(count)
-    # print(s.pure_text)
-    # print(s.pure_text.split())
+

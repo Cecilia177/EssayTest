@@ -1,24 +1,10 @@
-import numpy as np
-from sklearn.metrics import mean_squared_error
-from sentence import Sentence
-from feature import get_bleu_score
-from LSA import LSA
-from gensim.models import KeyedVectors
-from scipy.linalg import norm
-import jieba.posseg as psg
+import jieba.analyse as analyse
+
+ss = "我们不必一定去学习如何做到心理健康，这种能力植根于我们自身，就像我们的身体知道如何愈合伤口，如何修复断骨。"
+print(" ".join(analyse.extract_tags(ss, topK=5, withWeight=False, allowPOS=())))
 
 
-ss = "人民网1月1日讯，据《纽约时报》报道,美国华尔街股市在2013年的最后一天继续上涨"
-a = [1, 2 ,3]
-a[3:3] = [4]
-print(a)
-# print(np.asarray(A > 0, 'i'))
-# word_vectors = KeyedVectors.load("C:\\Users\\Cecilia\\AppData\\Local\\Temp\\vectors.kv")
-# vec0 = get_sentence_vec(ss0, mylsa.A[:, 0], word_vectors)
-# vec1 = get_sentence_vec(ss1, mylsa.A[:, 1], word_vectors)
-# sim = np.dot(vec0, vec1) / (norm(vec0) * norm(vec1)) if (norm(vec0) * norm(vec1)) != 0 else 0
-# print(vec0)
-# print(vec1)
-# print("similarity:", sim)
+
+
 
 

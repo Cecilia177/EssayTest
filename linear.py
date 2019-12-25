@@ -1,5 +1,5 @@
 from sklearn.linear_model import LinearRegression
-from feature import extract_features
+from feature import extract_data
 from train import learning_plot
 from sklearn.model_selection import ShuffleSplit, learning_curve, train_test_split
 from learningcurve import plot_learning_curve
@@ -9,7 +9,7 @@ from train import plot
 from correlation import pearson_cor
 from sklearn.metrics import make_scorer
 
-feature_list, score_list = extract_features()
+feature_list, score_list = extract_data()
 model = LinearRegression()
 # cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
 
